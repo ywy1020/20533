@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記憶配對遊戲</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../styles/main.css">
+    <style>
+        .memory-card {
+            width: 100px;
+            height: 100px;
+            margin: 5px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+            cursor: pointer;
+        }
+
+        .memory-card.flip {
+            transform: rotateY(180deg);
+        }
+
+        .front, .back {
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            position: absolute;
+            border-radius: 5px;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            border: 2px solid #ddd;
+        }
+
+        .front {
+            background-color: #2196F3;
+            transform: rotateY(180deg);
+            color: white;
+        }
+
+        .back {
+            background-color: #fff;
+            transform: rotateY(0deg);
+        }
+
+        .game-board {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="../index.html">迷你遊戲集</a>
+        </div>
+    </nav>
+
+    <div class="game-container">
+        <h2 class="text-center mb-4">記憶配對遊戲</h2>
+        <div class="text-center mb-3">
+            <p>找出所有配對的卡片！</p>
+            <button id="restartBtn" class="btn btn-primary mb-3">重新開始</button>
+            <p>移動次數：<span id="moves">0</span></p>
+        </div>
+        <div class="game-board"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const icons = ['fas fa-heart', 'fas fa-star', 'fas fa-cloud', 'fas fa-moon', 
+                         'fas fa-sun', 'fas fa-tree', 'fas fa-bell', 'fas fa-gift'];
+            const gameBoard = document.querySelector('.game-board');
+            const movesDisplay = document.getElementById('moves');
+            const restartBtn = document.getElementById('restartBtn');
+            let cards = [];
+            let hasFlippedCard = false;
+            let lockBoard = false;
+            let firstCard, secondCard;
+            let moves = 0;
+
+            function createCard(icon) {
+                const card = document.createElement('div');
+                card.className = 'memory-card';
+                card.innerHTML = `
+                    <div class="front">
+                        <i class="${icon}"></i>
+                    </div>
+                    <div class="back">
+                        <i class="fas fa-question"></i>
+                    </div>
+                `;
+                card.addEventListener('click', flipCard);
+                return card;
+            }
+
+            function initializeGame() {
+                moves = 0;
+                movesDisplay.textContent = moves;
+                gameBoard.innerHTML = '';
+                const doubledIcons = [...icons, ...icons];
+                const shuffledIcons = doubledIcons.sort(() => Math.random() - 0.5);
+                
+                shuffledIcons.forEach(icon => {
+                    const card = createCard(icon);
+                    gameBoard.appendChild(card);
+                });
+                
+                cards = document.querySelectorAll('.memory-card');
+            }
+
+            function flipCard() {
+                if (lockBoard) return;
+                if (this === firstCard) return;
+
+                this.classList.add('flip');
+
+                if (!hasFlippedCard) {
+                    hasFlippedCard = true;
+                    firstCard = this;
+                    return;
+                }
+
+                secondCard = this;
+                moves++;
+                movesDisplay.textContent = moves;
+                checkForMatch();
+            }
+
+            function checkForMatch() {
+                const isMatch = firstCard.querySelector('.front i').className === 
+                              secondCard.querySelector('.front i').className;
+
+                isMatch ? disableCards() : unflipCards();
+            }
+
+            function disableCards() {
+                firstCard.removeEventListener('click', flipCard);
+                secondCard.removeEventListener('click', flipCard);
+                resetBoard();
+
+                if (document.querySelectorAll('.memory-card:not(.flip)').length === 0) {
+                    setTimeout(() => {
+                        alert(`恭喜你完成了遊戲！總共移動 ${moves} 次。`);
+                    }, 500);
+                }
+            }
+
+            function unflipCards() {
+                lockBoard = true;
+                setTimeout(() => {
+                    firstCard.classList.remove('flip');
+                    secondCard.classList.remove('flip');
+                    resetBoard();
+                }, 1000);
+            }
+
+            function resetBoard() {
+                [hasFlippedCard, lockBoard] = [false, false];
+                [firstCard, secondCard] = [null, null];
+            }
+
+            restartBtn.addEventListener('click', initializeGame);
+            initializeGame();
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
