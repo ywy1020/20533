@@ -27,6 +27,13 @@
         <div id="message" class="alert text-center" style="display: none;"></div>
         <div class="text-center mt-3">
             <p>已猜次數：<span id="guessCount">0</span></p>
+            <p>最佳成績：<span id="bestScore">-</span> 次</p>
+        </div>
+        <div class="mt-4">
+            <h5 class="text-center">猜測歷史</h5>
+            <div id="guessHistory" class="list-group w-75 mx-auto">
+                <!-- 猜測記錄將在這裡動態添加 -->
+            </div>
         </div>
     </div>
 
@@ -34,11 +41,42 @@
         document.addEventListener('DOMContentLoaded', () => {
             let targetNumber = Math.floor(Math.random() * 100) + 1;
             let guessCount = 0;
+            let bestScore = localStorage.getItem('numberGuess_bestScore') || '-';
             const guessInput = document.getElementById('guessInput');
             const guessBtn = document.getElementById('guessBtn');
             const restartBtn = document.getElementById('restartBtn');
             const message = document.getElementById('message');
             const guessCountDisplay = document.getElementById('guessCount');
+            const bestScoreDisplay = document.getElementById('bestScore');
+            const guessHistory = document.getElementById('guessHistory');
+
+            bestScoreDisplay.textContent = bestScore;
+
+            function updateBestScore(score) {
+                if (bestScore === '-' || score < parseInt(bestScore)) {
+                    bestScore = score.toString();
+                    localStorage.setItem('numberGuess_bestScore', bestScore);
+                    bestScoreDisplay.textContent = bestScore;
+                }
+            }
+
+            function addToHistory(guess, hint) {
+                const listItem = document.createElement('div');
+                listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                
+                // 根據提示類型設定不同的顏色
+                let badgeClass = 'bg-info';
+                if (hint.includes('恭喜')) badgeClass = 'bg-success';
+                else if (hint.includes('太大')) badgeClass = 'bg-danger';
+                else if (hint.includes('太小')) badgeClass = 'bg-warning text-dark';
+
+                listItem.innerHTML = `
+                    <span>第 ${guessCount} 次：猜 ${guess}</span>
+                    <span class="badge ${badgeClass}">${hint}</span>
+                `;
+                
+                guessHistory.insertBefore(listItem, guessHistory.firstChild);
+            }
 
             function checkGuess() {
                 const userGuess = parseInt(guessInput.value);
@@ -50,14 +88,30 @@
                 guessCount++;
                 guessCountDisplay.textContent = guessCount;
 
+                let hint;
                 if (userGuess === targetNumber) {
-                    showMessage(`恭喜你猜對了！答案就是 ${targetNumber}！總共猜了 ${guessCount} 次。`, 'success');
+                    hint = `恭喜你猜對了！`;
+                    showMessage(`${hint}答案就是 ${targetNumber}！總共猜了 ${guessCount} 次。`, 'success');
                     guessBtn.disabled = true;
-                } else if (userGuess < targetNumber) {
-                    showMessage('太小了，再大一點！', 'info');
+                    updateBestScore(guessCount);
                 } else {
-                    showMessage('太大了，再小一點！', 'info');
+                    const diff = Math.abs(targetNumber - userGuess);
+                    if (userGuess < targetNumber) {
+                        hint = diff > 20 ? '太小了！差很多' : 
+                              diff > 10 ? '太小了！差不多快到了' : 
+                              '太小了！很接近了！';
+                        showMessage(hint, 'info');
+                    } else {
+                        hint = diff > 20 ? '太大了！差很多' : 
+                              diff > 10 ? '太大了！差不多快到了' : 
+                              '太大了！很接近了！';
+                        showMessage(hint, 'info');
+                    }
                 }
+
+                addToHistory(userGuess, hint);
+                guessInput.value = '';
+                guessInput.focus();
             }
 
             function showMessage(text, type) {
@@ -73,6 +127,7 @@
                 guessInput.value = '';
                 message.style.display = 'none';
                 guessBtn.disabled = false;
+                guessHistory.innerHTML = '';
             }
 
             guessBtn.addEventListener('click', checkGuess);
