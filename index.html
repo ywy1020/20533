@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,8 +29,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #f8f9fa;
+            background-color: var(--bg-color);
             border-radius: 0.25rem 0.25rem 0 0;
+            transition: background-color 0.3s ease;
         }
     </style>
 </head>
@@ -121,6 +122,20 @@
                     </div>
                 </div>
             </div>
+
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card game-card h-100" onclick="location.href='games/tetris.html'">
+                    <div class="card-img-container">
+                        <div class="game-icon">
+                            <i class="fas fa-shapes"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">俄羅斯方塊</h5>
+                        <p class="card-text">經典的方塊疊加遊戲，考驗你的空間規劃能力！</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -139,30 +154,41 @@
                 soundManager.play('click');
             });
 
-            // 深色模式控制
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
-            const darkMode = localStorage.getItem('darkMode') === 'true' || prefersDark.matches;
-            
-            function updateDarkMode(isDark) {
-                document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
-                darkModeToggle.querySelector('i').className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-                localStorage.setItem('darkMode', isDark);
+            // 初始化音效狀態
+            if (soundManager.muted) {
+                soundToggle.querySelector('i').className = 'fas fa-volume-mute';
             }
 
-            darkModeToggle.addEventListener('click', () => {
-                const isDark = document.documentElement.getAttribute('data-bs-theme') !== 'dark';
-                updateDarkMode(isDark);
+            // 深色模式控制
+            function initTheme() {
+                const savedTheme = localStorage.getItem('darkMode');
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+                const shouldBeDark = savedTheme === 'true' || (savedTheme === null && prefersDark.matches);
+                
+                document.documentElement.setAttribute('data-bs-theme', shouldBeDark ? 'dark' : 'light');
+                darkModeToggle.querySelector('i').className = shouldBeDark ? 'fas fa-sun' : 'fas fa-moon';
+            }
+
+            function toggleTheme() {
+                const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                const newTheme = isDark ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
+                darkModeToggle.querySelector('i').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+                localStorage.setItem('darkMode', !isDark);
                 soundManager.play('click');
-            });
+            }
 
-            // 初始化深色模式
-            updateDarkMode(darkMode);
+            darkModeToggle.addEventListener('click', toggleTheme);
+            
+            // 初始化主題
+            initTheme();
 
-            // 添加卡片點擊音效
-            document.querySelectorAll('.game-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    soundManager.play('pop');
-                });
+            // 監聽系統主題變更
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                if (localStorage.getItem('darkMode') === null) {
+                    document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : 'light');
+                    darkModeToggle.querySelector('i').className = e.matches ? 'fas fa-sun' : 'fas fa-moon';
+                }
             });
         });
     </script>

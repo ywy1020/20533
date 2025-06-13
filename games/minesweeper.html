@@ -178,26 +178,26 @@
         </div>
     </div>
 
+    <script src="../scripts/sound.js"></script>
     <script>
+        const soundManager = new SoundManager();
+        let board = [];
+        let mineCount = 0;
+        let gameOver = false;
+        let firstClick = true;
+        let timer = null;
+        let timeElapsed = 0;
+
         document.addEventListener('DOMContentLoaded', () => {
-            const board = document.querySelector('.game-board');
             const minesLeftDisplay = document.getElementById('minesLeft');
             const timerDisplay = document.getElementById('timer');
             const newGameBtn = document.getElementById('newGameBtn');
             const difficultyBtns = document.querySelectorAll('[data-difficulty]');
             const contextMenu = document.querySelector('.context-menu');
             
-            let grid = [];
-            let mineLocations = new Set();
-            let revealed = new Set();
-            let flagged = new Set();
-            let gameOver = false;
-            let timer = 0;
-            let timerInterval;
             let rows = 9;
             let cols = 9;
             let totalMines = 10;
-            let firstClick = true;
 
             const difficulties = {
                 easy: { rows: 9, cols: 9, mines: 10 },
@@ -213,41 +213,47 @@
                 totalMines = config.mines;
                 
                 // 重置遊戲狀態
-                grid = [];
-                mineLocations.clear();
-                revealed.clear();
-                flagged.clear();
+                board = [];
+                mineCount = 0;
                 gameOver = false;
                 firstClick = true;
-                clearInterval(timerInterval);
-                timer = 0;
+                clearInterval(timer);
+                timeElapsed = 0;
                 timerDisplay.textContent = '0';
                 minesLeftDisplay.textContent = totalMines;
 
                 // 設置網格大小
-                board.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
-                board.innerHTML = '';
+                const gridElement = document.querySelector('.game-board');
+                gridElement.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+                gridElement.innerHTML = '';
 
                 // 創建網格
                 for (let i = 0; i < rows; i++) {
-                    grid[i] = [];
+                    board[i] = [];
                     for (let j = 0; j < cols; j++) {
-                        const cell = document.createElement('div');
-                        cell.className = 'cell';
-                        cell.dataset.row = i;
-                        cell.dataset.col = j;
-                        board.appendChild(cell);
-                        grid[i][j] = {
-                            element: cell,
+                        const cell = {
+                            element: createCellElement(i, j),
                             isMine: false,
-                            neighborMines: 0
+                            neighborMines: 0,
+                            revealed: false,
+                            flagged: false
                         };
+                        board[i][j] = cell;
                     }
                 }
 
                 // 添加事件監聽器
-                board.addEventListener('click', handleClick);
-                board.addEventListener('contextmenu', handleRightClick);
+                gridElement.addEventListener('click', handleClick);
+                gridElement.addEventListener('contextmenu', handleRightClick);
+            }
+
+            function createCellElement(row, col) {
+                const cellElement = document.createElement('div');
+                cellElement.className = 'cell';
+                cellElement.dataset.row = row;
+                cellElement.dataset.col = col;
+                document.querySelector('.game-board').appendChild(cellElement);
+                return cellElement;
             }
 
             function placeMines(firstRow, firstCol) {
@@ -255,14 +261,14 @@
                 while (minesPlaced < totalMines) {
                     const row = Math.floor(Math.random() * rows);
                     const col = Math.floor(Math.random() * cols);
-                    const key = `${row},${col}`;
+                    const cell = board[row][col];
                     
                     // 確保不在首次點擊位置及其周圍放置地雷
-                    if (!mineLocations.has(key) && 
+                    if (!cell.isMine && 
                         Math.abs(row - firstRow) > 1 || 
                         Math.abs(col - firstCol) > 1) {
-                        mineLocations.add(key);
-                        grid[row][col].isMine = true;
+                        cell.isMine = true;
+                        mineCount++;
                         minesPlaced++;
                     }
                 }
@@ -270,8 +276,9 @@
                 // 計算每個格子周圍的地雷數
                 for (let i = 0; i < rows; i++) {
                     for (let j = 0; j < cols; j++) {
-                        if (!grid[i][j].isMine) {
-                            grid[i][j].neighborMines = countNeighborMines(i, j);
+                        const cell = board[i][j];
+                        if (!cell.isMine) {
+                            cell.neighborMines = countNeighborMines(i, j);
                         }
                     }
                 }
@@ -285,7 +292,7 @@
                         const newCol = col + j;
                         if (newRow >= 0 && newRow < rows && 
                             newCol >= 0 && newCol < cols &&
-                            grid[newRow][newCol].isMine) {
+                            board[newRow][newCol].isMine) {
                             count++;
                         }
                     }
@@ -296,17 +303,11 @@
             function handleClick(e) {
                 if (gameOver) return;
                 
-                const cell = e.target;
-                if (!cell.classList.contains('cell')) return;
+                const cellElement = e.target;
+                if (!cellElement.classList.contains('cell')) return;
                 
-                const row = parseInt(cell.dataset.row);
-                const col = parseInt(cell.dataset.col);
-                
-                if (firstClick) {
-                    firstClick = false;
-                    placeMines(row, col);
-                    startTimer();
-                }
+                const row = parseInt(cellElement.dataset.row);
+                const col = parseInt(cellElement.dataset.col);
                 
                 revealCell(row, col);
             }
@@ -315,109 +316,148 @@
                 e.preventDefault();
                 if (gameOver) return;
                 
-                const cell = e.target;
-                if (!cell.classList.contains('cell')) return;
+                const cellElement = e.target;
+                if (!cellElement.classList.contains('cell')) return;
                 
-                const row = parseInt(cell.dataset.row);
-                const col = parseInt(cell.dataset.col);
-                const key = `${row},${col}`;
+                const row = parseInt(cellElement.dataset.row);
+                const col = parseInt(cellElement.dataset.col);
                 
-                if (!revealed.has(key)) {
-                    toggleFlag(row, col);
+                toggleFlag(row, col);
+            }
+
+            function revealCell(row, col) {
+                if (gameOver || board[row][col].flagged) return;
+
+                if (firstClick) {
+                    firstClick = false;
+                    placeMines(row, col);
+                    startTimer();
+                }
+
+                const cell = board[row][col];
+                if (cell.revealed) return;
+
+                cell.revealed = true;
+                updateCellDisplay(row, col);
+
+                if (cell.isMine) {
+                    soundManager.play('mine-explode');
+                    gameOver = true;
+                    revealAllMines();
+                    stopTimer();
+                    setTimeout(() => {
+                        alert('遊戲結束！');
+                    }, 500);
+                } else {
+                    soundManager.play('click');
+                    if (cell.neighborMines === 0) {
+                        // 如果是空白格，則揭開周圍的格子
+                        for (let i = -1; i <= 1; i++) {
+                            for (let j = -1; j <= 1; j++) {
+                                const newRow = row + i;
+                                const newCol = col + j;
+                                if (isValidCell(newRow, newCol)) {
+                                    revealCell(newRow, newCol);
+                                }
+                            }
+                        }
+                    }
+                    checkWinCondition();
                 }
             }
 
             function toggleFlag(row, col) {
-                const key = `${row},${col}`;
-                const cell = grid[row][col].element;
+                if (gameOver || board[row][col].revealed) return;
+
+                const cell = board[row][col];
+                cell.flagged = !cell.flagged;
+                soundManager.play('mine-flag');
+                updateCellDisplay(row, col);
+                updateFlagCount();
                 
-                if (flagged.has(key)) {
-                    flagged.delete(key);
-                    cell.innerHTML = '';
-                    cell.classList.remove('flagged');
-                    minesLeftDisplay.textContent = parseInt(minesLeftDisplay.textContent) + 1;
-                } else if (parseInt(minesLeftDisplay.textContent) > 0) {
-                    flagged.add(key);
-                    cell.innerHTML = '🚩';
-                    cell.classList.add('flagged');
-                    minesLeftDisplay.textContent = parseInt(minesLeftDisplay.textContent) - 1;
+                if (!firstClick) {
+                    checkWinCondition();
                 }
             }
 
-            function revealCell(row, col) {
-                const key = `${row},${col}`;
-                if (revealed.has(key) || flagged.has(key)) return;
-                
-                const cell = grid[row][col];
-                revealed.add(key);
-                cell.element.classList.add('revealed');
-                
-                if (cell.isMine) {
-                    gameOver = true;
-                    cell.element.classList.add('mine');
-                    cell.element.innerHTML = '💣';
-                    revealAllMines();
-                    clearInterval(timerInterval);
-                    alert('遊戲結束！你踩到地雷了！');
-                    return;
-                }
-                
-                if (cell.neighborMines > 0) {
-                    cell.element.textContent = cell.neighborMines;
-                    // 設置不同數字的顏色
-                    const colors = ['blue', 'green', 'red', 'purple', 'maroon', 'turquoise', 'black', 'gray'];
-                    cell.element.style.color = colors[cell.neighborMines - 1];
-                } else {
-                    // 如果是空格，則揭露周圍的格子
-                    for (let i = -1; i <= 1; i++) {
-                        for (let j = -1; j <= 1; j++) {
-                            const newRow = row + i;
-                            const newCol = col + j;
-                            if (newRow >= 0 && newRow < rows && 
-                                newCol >= 0 && newCol < cols) {
-                                revealCell(newRow, newCol);
-                            }
+            function checkWinCondition() {
+                let won = true;
+                for (let row = 0; row < board.length; row++) {
+                    for (let col = 0; col < board[0].length; col++) {
+                        const cell = board[row][col];
+                        if (!cell.isMine && !cell.revealed) {
+                            won = false;
+                            break;
                         }
                     }
+                    if (!won) break;
                 }
 
-                checkWin();
+                if (won) {
+                    gameOver = true;
+                    stopTimer();
+                    soundManager.play('win');
+                    setTimeout(() => {
+                        alert('恭喜你贏了！用時：' + timeElapsed + ' 秒');
+                    }, 500);
+                }
+            }
+
+            function updateCellDisplay(row, col) {
+                const cell = board[row][col];
+                const cellElement = cell.element;
+                
+                if (cell.revealed) {
+                    cellElement.classList.add('revealed');
+                    if (cell.isMine) {
+                        cellElement.innerHTML = '💣';
+                    } else {
+                        cellElement.innerHTML = cell.neighborMines > 0 ? cell.neighborMines : '';
+                        // 設置不同數字的顏色
+                        const colors = ['blue', 'green', 'red', 'purple', 'maroon', 'turquoise', 'black', 'gray'];
+                        cellElement.style.color = colors[cell.neighborMines - 1];
+                    }
+                } else if (cell.flagged) {
+                    cellElement.innerHTML = '🚩';
+                    cellElement.classList.add('flagged');
+                } else {
+                    cellElement.innerHTML = '';
+                    cellElement.classList.remove('flagged');
+                }
+            }
+
+            function updateFlagCount() {
+                const flagCount = board.flat().filter(cell => cell.flagged).length;
+                minesLeftDisplay.textContent = totalMines - flagCount;
             }
 
             function revealAllMines() {
-                mineLocations.forEach(key => {
-                    const [row, col] = key.split(',').map(Number);
-                    const cell = grid[row][col].element;
-                    if (!flagged.has(key)) {
-                        cell.classList.add('revealed', 'mine');
-                        cell.innerHTML = '💣';
-                    }
+                board.forEach(row => {
+                    row.forEach(cell => {
+                        if (cell.isMine) {
+                            cell.revealed = true;
+                            cell.element.classList.add('revealed', 'mine');
+                            cell.element.innerHTML = '💣';
+                        }
+                    });
                 });
             }
 
-            function checkWin() {
-                const totalCells = rows * cols;
-                const revealedCount = revealed.size;
-                const correctFlags = Array.from(flagged).filter(key => {
-                    const [row, col] = key.split(',').map(Number);
-                    return grid[row][col].isMine;
-                }).length;
-
-                if ((revealedCount === totalCells - totalMines && correctFlags === totalMines) ||
-                    (correctFlags === totalMines && flagged.size === totalMines)) {
-                    gameOver = true;
-                    clearInterval(timerInterval);
-                    alert(`恭喜你贏了！用時 ${timer} 秒`);
-                }
+            function startTimer() {
+                clearInterval(timer);
+                timeElapsed = 0;
+                timer = setInterval(() => {
+                    timeElapsed++;
+                    timerDisplay.textContent = timeElapsed;
+                }, 1000);
             }
 
-            function startTimer() {
-                clearInterval(timerInterval);
-                timer = 0;
-                timerInterval = setInterval(() => {
-                    timer++;
-                    timerDisplay.textContent = timer;
-                }, 1000);
+            function stopTimer() {
+                clearInterval(timer);
+            }
+
+            function isValidCell(row, col) {
+                return row >= 0 && row < rows && col >= 0 && col < cols;
             }
 
             // 初始化遊戲

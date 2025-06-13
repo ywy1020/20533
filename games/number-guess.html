@@ -37,8 +37,10 @@
         </div>
     </div>
 
+    <script src="../scripts/sound.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const soundManager = new SoundManager();
             let targetNumber = Math.floor(Math.random() * 100) + 1;
             let guessCount = 0;
             let bestScore = localStorage.getItem('numberGuess_bestScore') || '-';
@@ -66,9 +68,13 @@
                 
                 // 根據提示類型設定不同的顏色
                 let badgeClass = 'bg-info';
-                if (hint.includes('恭喜')) badgeClass = 'bg-success';
-                else if (hint.includes('太大')) badgeClass = 'bg-danger';
-                else if (hint.includes('太小')) badgeClass = 'bg-warning text-dark';
+                if (hint.includes('恭喜')) {
+                    badgeClass = 'bg-success';
+                    soundManager.play('win');
+                } else if (hint.includes('太大') || hint.includes('太小')) {
+                    badgeClass = hint.includes('太大') ? 'bg-danger' : 'bg-warning text-dark';
+                    soundManager.play('guess-hint');
+                }
 
                 listItem.innerHTML = `
                     <span>第 ${guessCount} 次：猜 ${guess}</span>
@@ -94,19 +100,16 @@
                     showMessage(`${hint}答案就是 ${targetNumber}！總共猜了 ${guessCount} 次。`, 'success');
                     guessBtn.disabled = true;
                     updateBestScore(guessCount);
+                    soundManager.play('win');
                 } else {
                     const diff = Math.abs(targetNumber - userGuess);
                     if (userGuess < targetNumber) {
-                        hint = diff > 20 ? '太小了！差很多' : 
-                              diff > 10 ? '太小了！差不多快到了' : 
-                              '太小了！很接近了！';
-                        showMessage(hint, 'info');
+                        hint = diff > 20 ? '太小了！差很多' : diff > 10 ? '太小了！差不多快到了' : '太小了！很接近了';
                     } else {
-                        hint = diff > 20 ? '太大了！差很多' : 
-                              diff > 10 ? '太大了！差不多快到了' : 
-                              '太大了！很接近了！';
-                        showMessage(hint, 'info');
+                        hint = diff > 20 ? '太大了！差很多' : diff > 10 ? '太大了！差不多快到了' : '太大了！很接近了';
                     }
+                    showMessage(hint, userGuess < targetNumber ? 'warning' : 'danger');
+                    soundManager.play('guess-hint');
                 }
 
                 addToHistory(userGuess, hint);
@@ -130,10 +133,26 @@
                 guessHistory.innerHTML = '';
             }
 
-            guessBtn.addEventListener('click', checkGuess);
-            restartBtn.addEventListener('click', restart);
+            restartBtn.addEventListener('click', () => {
+                soundManager.play('click');
+                targetNumber = Math.floor(Math.random() * 100) + 1;
+                guessCount = 0;
+                guessCountDisplay.textContent = '0';
+                guessInput.value = '';
+                guessHistory.innerHTML = '';
+                message.style.display = 'none';
+                guessBtn.disabled = false;
+                guessInput.focus();
+            });
+
+            guessBtn.addEventListener('click', () => {
+                soundManager.play('click');
+                checkGuess();
+            });
+
             guessInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !guessBtn.disabled) {
+                    soundManager.play('click');
                     checkGuess();
                 }
             });

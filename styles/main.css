@@ -1,31 +1,75 @@
 :root {
+    /* 淺色模式變數 */
     --bg-color: #f8f9fa;
     --text-color: #212529;
     --container-bg: #ffffff;
     --shadow-color: rgba(0, 0, 0, 0.1);
     --hover-shadow: rgba(0, 0, 0, 0.2);
     --border-color: #dee2e6;
+    --accent-color: #0d6efd;
+    --accent-hover: #0b5ed7;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    
+    /* 遊戲特定變數 */
+    --game-board-bg: #f0f0f0;
+    --game-border: #333;
+    --cell-bg: #dddddd;
+    --cell-text: #333;
+    --memory-card-front: #2196F3;
+    --memory-card-back: #fff;
+    --mine-bg: #dddddd;
+    --mine-border: #ffffff #a1a1a1 #a1a1a1 #ffffff;
+    --snake-food: #ff0000;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-color: #212529;
-        --text-color: #f8f9fa;
-        --container-bg: #343a40;
-        --shadow-color: rgba(0, 0, 0, 0.3);
-        --hover-shadow: rgba(0, 0, 0, 0.4);
-        --border-color: #495057;
-    }
+[data-bs-theme="dark"] {
+    /* 深色模式變數 */
+    --bg-color: #1a1d20;
+    --text-color: #f8f9fa;
+    --container-bg: #2d3238;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --hover-shadow: rgba(0, 0, 0, 0.6);
+    --border-color: #3d444a;
+    --accent-color: #0d6efd;
+    --accent-hover: #0099ff;
+    --success-color: #00b894;
+    --danger-color: #ff6b6b;
+    --warning-color: #ffd93d;
+    --info-color: #74b9ff;
+    
+    /* 遊戲特定深色模式變數 */
+    --game-board-bg: #2d3238;
+    --game-border: #4a4a4a;
+    --cell-bg: #3d444a;
+    --cell-text: #f8f9fa;
+    --memory-card-front: #0099ff;
+    --memory-card-back: #2d3238;
+    --mine-bg: #3d444a;
+    --mine-border: #4a4a4a #2d3238 #2d3238 #4a4a4a;
+    --snake-food: #ff6b6b;
+}
+
+/* 全域過渡效果 */
+* {
+    transition: background-color 0.3s ease,
+                color 0.3s ease,
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* 卡片樣式 */
 .card {
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s ease,
+                box-shadow 0.2s ease,
+                background-color 0.3s ease;
     box-shadow: 0 4px 6px var(--shadow-color);
     background-color: var(--container-bg);
     border-color: var(--border-color);
@@ -36,41 +80,53 @@ body {
     box-shadow: 0 6px 12px var(--hover-shadow);
 }
 
-.navbar-brand {
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
+/* 容器樣式 */
 .game-container {
     max-width: 800px;
     margin: 2rem auto;
-    padding: 1rem;
+    padding: 1.5rem;
     background-color: var(--container-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* 按鈕樣式 */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:active {
+    transform: scale(0.95);
+}
+
+/* 遊戲特定樣式 */
+#gameCanvas {
+    background-color: var(--game-board-bg);
+    border: 2px solid var(--game-border);
+}
+
+.cell {
+    background-color: var(--cell-bg);
+    color: var(--cell-text);
     border-radius: 8px;
-    box-shadow: 0 2px 4px var(--shadow-color);
-    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    transition: background-color 0.2s ease,
+                transform 0.2s ease;
 }
 
-/* 全局動畫類 */
-.fade-in {
-    animation: fadeIn 0.3s ease-in;
+.memory-card .front {
+    background-color: var(--memory-card-front);
+    color: white;
 }
 
-.scale-in {
-    animation: scaleIn 0.3s ease-out;
+.memory-card .back {
+    background-color: var(--memory-card-back);
+    color: var(--text-color);
 }
 
-.bounce {
-    animation: bounce 0.5s ease-in-out;
-}
-
+/* 動畫效果 */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes scaleIn {
@@ -85,22 +141,31 @@ body {
 }
 
 @keyframes bounce {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-    }
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
-/* 遊戲相關樣式 */
-.btn {
-    transition: all 0.2s ease;
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
 }
 
-.btn:active {
-    transform: scale(0.95);
+.scale-in {
+    animation: scaleIn 0.3s ease-out;
+}
+
+.bounce {
+    animation: bounce 0.5s ease-in-out;
+}
+
+/* 深色模式過渡動畫 */
+@media (prefers-color-scheme: dark) {
+    .game-container,
+    .card,
+    .cell,
+    .memory-card .front,
+    .memory-card .back,
+    #gameCanvas {
+        transition: all 0.3s ease;
+    }
 }

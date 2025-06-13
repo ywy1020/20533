@@ -73,8 +73,10 @@
         <div class="game-board"></div>
     </div>
 
+    <script src="../scripts/sound.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const soundManager = new SoundManager();
             const icons = ['fas fa-heart', 'fas fa-star', 'fas fa-cloud', 'fas fa-moon', 
                          'fas fa-sun', 'fas fa-tree', 'fas fa-bell', 'fas fa-gift'];
             const gameBoard = document.querySelector('.game-board');
@@ -85,6 +87,7 @@
             let lockBoard = false;
             let firstCard, secondCard;
             let moves = 0;
+            let matchedPairs = 0;
 
             function createCard(icon) {
                 const card = document.createElement('div');
@@ -102,6 +105,7 @@
             }
 
             function initializeGame() {
+                matchedPairs = 0;
                 moves = 0;
                 movesDisplay.textContent = moves;
                 gameBoard.innerHTML = '';
@@ -120,6 +124,7 @@
                 if (lockBoard) return;
                 if (this === firstCard) return;
 
+                soundManager.play('card-flip');
                 this.classList.add('flip');
 
                 if (!hasFlippedCard) {
@@ -135,22 +140,29 @@
             }
 
             function checkForMatch() {
-                const isMatch = firstCard.querySelector('.front i').className === 
-                              secondCard.querySelector('.front i').className;
+                const isMatch = firstCard.querySelector('i').className === 
+                              secondCard.querySelector('i').className;
 
-                isMatch ? disableCards() : unflipCards();
+                if (isMatch) {
+                    soundManager.play('card-match');
+                    disableCards();
+                    matchedPairs++;
+                    
+                    if (matchedPairs === icons.length) {
+                        soundManager.play('win');
+                        setTimeout(() => {
+                            alert(`恭喜你完成遊戲！\n總共移動了 ${moves} 次`);
+                        }, 500);
+                    }
+                } else {
+                    unflipCards();
+                }
             }
 
             function disableCards() {
                 firstCard.removeEventListener('click', flipCard);
                 secondCard.removeEventListener('click', flipCard);
                 resetBoard();
-
-                if (document.querySelectorAll('.memory-card:not(.flip)').length === 0) {
-                    setTimeout(() => {
-                        alert(`恭喜你完成了遊戲！總共移動 ${moves} 次。`);
-                    }, 500);
-                }
             }
 
             function unflipCards() {
@@ -167,8 +179,29 @@
                 [firstCard, secondCard] = [null, null];
             }
 
-            restartBtn.addEventListener('click', initializeGame);
-            initializeGame();
+            function shuffle(array) {
+                return array.sort(() => Math.random() - 0.5);
+            }
+
+            function initGame() {
+                matchedPairs = 0;
+                moves = 0;
+                movesDisplay.textContent = moves;
+                const cardIcons = [...icons, ...icons];
+                shuffle(cardIcons);
+                gameBoard.innerHTML = '';
+                cardIcons.forEach(icon => {
+                    const card = createCard(icon);
+                    gameBoard.appendChild(card);
+                });
+            }
+
+            restartBtn.addEventListener('click', () => {
+                soundManager.play('click');
+                initGame();
+            });
+
+            initGame();
         });
     </script>
 
